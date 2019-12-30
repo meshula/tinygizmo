@@ -4,12 +4,12 @@
 #include <iostream>
 #include <chrono>
 
+#include "../tiny-gizmo.hpp"
 #include "util.hpp"
 #include "gl-api.hpp"
 #include "teapot.h"
 
 using namespace tinygizmo;
-using namespace minalg;
 
 static inline uint64_t get_local_time_ns()
 {
@@ -97,17 +97,18 @@ constexpr const char lit_frag[] = R"(#version 330
 //   Main Application   //
 //////////////////////////
 
+
 geometry_mesh make_teapot()
 {
     geometry_mesh mesh;
     for (int i = 0; i < 4974; i+=6)
     {
         geometry_vertex v;
-        v.position = float3(teapot_vertices[i + 0], teapot_vertices[i + 1], teapot_vertices[i + 2]);
-        v.normal = float3(teapot_vertices[i + 3], teapot_vertices[i + 4], teapot_vertices[i + 5]);
+        v.position = v3f{ teapot_vertices[i + 0], teapot_vertices[i + 1], teapot_vertices[i + 2] };
+        v.normal = v3f{ teapot_vertices[i + 3], teapot_vertices[i + 4], teapot_vertices[i + 5] };
         mesh.vertices.push_back(v);
     }
-    for (int i = 0; i < 4680; i+=3) mesh.triangles.push_back(uint3(teapot_triangles[i + 0], teapot_triangles[i + 1], teapot_triangles[i + 2]));
+    for (int i = 0; i < 4680; i += 3) mesh.triangles.push_back(uint3{ teapot_triangles[i + 0], teapot_triangles[i + 1], teapot_triangles[i + 2] });
     return mesh;
 }
 
@@ -205,16 +206,16 @@ int main(int argc, char * argv[])
         if (button == GLFW_MOUSE_BUTTON_RIGHT) mr = (action != GLFW_RELEASE);
     };
 
-    minalg::float2 lastCursor;
+    linalg::aliases::float2 lastCursor;
     win->on_cursor_pos = [&](linalg::aliases::float2 position)
     {
-        auto deltaCursorMotion = minalg::float2(position.x, position.y) - lastCursor;
+        auto deltaCursorMotion = linalg::aliases::float2(position.x, position.y) - lastCursor;
         if (mr)
         {
             cam.yaw -= deltaCursorMotion.x * 0.01f;
             cam.pitch -= deltaCursorMotion.y * 0.01f;
         }
-        lastCursor = minalg::float2(position.x, position.y);
+        lastCursor = linalg::aliases::float2(position.x, position.y);
     };
 
     rigid_transform xform_a;
@@ -258,14 +259,14 @@ int main(int argc, char * argv[])
         const auto rayDir = get_ray_from_pixel({ lastCursor.x, lastCursor.y }, { 0, 0, windowSize.x, windowSize.y }, cam).direction;
 
         // Gizmo input interaction state populated via win->on_input(...) callback above. Update app parameters: 
-        gizmo_state.viewport_size = minalg::float2(windowSize.x, windowSize.y);
+        gizmo_state.viewport_size_ = v2f{ float(windowSize.x), float(windowSize.y) };
         gizmo_state.cam.near_clip = cam.near_clip;
         gizmo_state.cam.far_clip = cam.far_clip;
         gizmo_state.cam.yfov = cam.yfov;
-        gizmo_state.cam.position = minalg::float3(cam.position.x, cam.position.y, cam.position.z);
-        gizmo_state.cam.orientation = minalg::float4(cameraOrientation.x, cameraOrientation.y, cameraOrientation.z, cameraOrientation.w);
-        gizmo_state.ray_origin = minalg::float3(cam.position.x, cam.position.y, cam.position.z);
-        gizmo_state.ray_direction = minalg::float3(rayDir.x, rayDir.y, rayDir.z);
+        gizmo_state.cam.position_ = v3f{ cam.position.x, cam.position.y, cam.position.z };
+        gizmo_state.cam.orientation_ = v4f{ cameraOrientation.x, cameraOrientation.y, cameraOrientation.z, cameraOrientation.w };
+        gizmo_state.ray_origin_ = v3f{ cam.position.x, cam.position.y, cam.position.z };
+        gizmo_state.ray_direction_ = v3f{ rayDir.x, rayDir.y, rayDir.z };
         //gizmo_state.screenspace_scale = 80.f; // optional flag to draw the gizmos at a constant screen-space scale
   
         glDisable(GL_CULL_FACE);
@@ -277,18 +278,18 @@ int main(int argc, char * argv[])
         auto teapotModelMatrix_b = reinterpret_cast<const linalg::aliases::float4x4 &>(teapotModelMatrix_b_tmp);
         draw_lit_mesh(litShader, teapotMesh, cam.position, cam.get_viewproj_matrix((float)windowSize.x / (float)windowSize.y), teapotModelMatrix_b);
 
-        glClear(GL_DEPTH_BUFFER_BIT);
+        //glClear(GL_DEPTH_BUFFER_BIT);
 
         gizmo_ctx.update(gizmo_state);
 
-        if (transform_gizmo("first-example-gizmo", gizmo_ctx, xform_a))
+        if (gizmo_ctx.transform_gizmo("first-example-gizmo", xform_a))
         {
-            std::cout << get_local_time_ns() << " - " << "First Gizmo Hovered..." << std::endl;
-            if (xform_a != xform_a_last) std::cout << get_local_time_ns() << " - " << "First Gizmo Changed..." << std::endl;
+//            std::cout << get_local_time_ns() << " - " << "First Gizmo Hovered..." << std::endl;
+//            if (xform_a != xform_a_last) std::cout << get_local_time_ns() << " - " << "First Gizmo Changed..." << std::endl;
             xform_a_last = xform_a;
         }
 
-        transform_gizmo("second-example-gizmo", gizmo_ctx, xform_b);
+        gizmo_ctx.transform_gizmo("second-example-gizmo", xform_b);
         gizmo_ctx.draw();
 
         gl_check_error(__FILE__, __LINE__);
