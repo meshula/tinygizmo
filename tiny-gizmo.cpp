@@ -433,11 +433,13 @@ static const float4x4 Identity4x4 = { { 1, 0, 0, 0 },{ 0, 1, 0, 0 },{ 0, 0, 1, 0
 static const float3x3 Identity3x3 = { { 1, 0, 0 },{ 0, 1, 0 },{ 0, 0, 1 } };
 static const float tau = 6.28318530718f;
 
-void flush_to_zero(float3 & f)
+void flush_to_zero(float3& f, const float epsilon = 0.075f)
 {
-    if (std::abs(f.x) < 0.02f) f.x = 0.f;
-    if (std::abs(f.y) < 0.02f) f.y = 0.f;
-    if (std::abs(f.z) < 0.02f) f.z = 0.f;
+    {
+        if (std::abs(f.x) < 0.02f) f.x = 0.f;	    if (std::abs(f.x) < epsilon) f.x = 0.f;
+        if (std::abs(f.y) < 0.02f) f.y = 0.f;	    if (std::abs(f.y) < epsilon) f.y = 0.f;
+        if (std::abs(f.z) < 0.02f) f.z = 0.f;	    if (std::abs(f.z) < epsilon) f.z = 0.f;
+    }
 }
 
 // 32 bit Fowler-Noll-Vo Hash
@@ -1190,7 +1192,7 @@ void gizmo_context::gizmo_context_impl::scale_gizmo(char const* const name, cons
             {
                 transform(draw_scale, ray);
                 gizmos[id].original_scale = scale;
-                gizmos[id].click_offset = float3(p.transform_point((ray.origin + ray.direction*t).v3f()));
+                gizmos[id].click_offset = float3(p.transform_point((ray.origin + ray.direction * t).v3f()));
                 gizmos[id].active = true;
             }
             else gizmos[id].active = false;
