@@ -253,14 +253,14 @@ int main(int argc, char * argv[])
         const auto rayDir = get_ray_from_pixel({ lastCursor.x, lastCursor.y }, { 0, 0, windowSize.x, windowSize.y }, cam).direction;
 
         // Gizmo input interaction state populated via win->on_input(...) callback above. Update app parameters: 
-        gizmo_state.viewport_size_ = v2f{ float(windowSize.x), float(windowSize.y) };
+        gizmo_state.viewport_size = v2f{ float(windowSize.x), float(windowSize.y) };
         gizmo_state.cam.near_clip = cam.near_clip;
         gizmo_state.cam.far_clip = cam.far_clip;
         gizmo_state.cam.yfov = cam.yfov;
-        gizmo_state.cam.position_ = v3f{ cam.position.x, cam.position.y, cam.position.z };
-        gizmo_state.cam.orientation_ = v4f{ cameraOrientation.x, cameraOrientation.y, cameraOrientation.z, cameraOrientation.w };
-        gizmo_state.ray_origin_ = v3f{ cam.position.x, cam.position.y, cam.position.z };
-        gizmo_state.ray_direction_ = v3f{ rayDir.x, rayDir.y, rayDir.z };
+        gizmo_state.cam.position = v3f{ cam.position.x, cam.position.y, cam.position.z };
+        gizmo_state.cam.orientation = v4f{ cameraOrientation.x, cameraOrientation.y, cameraOrientation.z, cameraOrientation.w };
+        gizmo_state.ray_origin= v3f{ cam.position.x, cam.position.y, cam.position.z };
+        gizmo_state.ray_direction = v3f{ rayDir.x, rayDir.y, rayDir.z };
         //gizmo_state.screenspace_scale = 80.f; // optional flag to draw the gizmos at a constant screen-space scale
   
         glDisable(GL_CULL_FACE);
@@ -283,7 +283,10 @@ int main(int argc, char * argv[])
             xform_a_last = xform_a;
         }
 
-        gizmo_ctx.transform_gizmo("second-example-gizmo", xform_b);
+        static int foo = 60;
+        if (foo > 0)
+            gizmo_ctx.transform_gizmo("second-example-gizmo", xform_b);
+        --foo;
 
         static geometry_mesh r; // Combine all gizmo sub-meshes into one super-mesh
         
