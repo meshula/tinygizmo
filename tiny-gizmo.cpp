@@ -1,5 +1,8 @@
-// This is free and unencumbered software released into the public domain.
+// This is free and unencumbered software originally written and released into the public domain by Dimitri Diakopoulos.
 // For more information, please refer to <http://unlicense.org>
+//
+// The original code is here: https://github.com/ddiakopoulos/tinygizmo
+// and this version is from here: https://github.com/meshula/tinygizmo/tree/really-tiny
 
 #include "tiny-gizmo.hpp"
 
