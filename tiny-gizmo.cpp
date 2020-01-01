@@ -942,7 +942,10 @@ void gizmo_context::gizmo_context_impl::position_gizmo(char const* const name, c
     const uint32_t id = hash_fnv1a(name);
 
     // interaction_mode will only change on clicked
-    if (has_clicked) gizmos[id].interaction_mode = interact::none;
+    if (has_clicked) 
+        gizmos[id].interaction_mode = interact::none;
+
+    interact transient_hover_mode = interact::none;
 
     {
         interact updated_state = interact::none;
@@ -971,6 +974,7 @@ void gizmo_context::gizmo_context_impl::position_gizmo(char const* const name, c
             else gizmos[id].active = false;
         }
 
+        transient_hover_mode = updated_state;
         gizmos[id].hover = (best_t == std::numeric_limits<float>::infinity()) ? false : true;
     }
  
@@ -1015,7 +1019,7 @@ void gizmo_context::gizmo_context_impl::position_gizmo(char const* const name, c
     {
         gizmo_renderable r;
         r.mesh = mesh_components[c].mesh;
-        r.color = (c == gizmos[id].interaction_mode) ? mesh_components[c].base_color : mesh_components[c].highlight_color;
+        r.color = (c == gizmos[id].interaction_mode || c == transient_hover_mode) ? mesh_components[c].base_color : mesh_components[c].highlight_color;
         for (auto & v : r.mesh.vertices)
         {
             v.position = transform_coord(modelMatrix, v.position); // transform local coordinates into worldspace
@@ -1034,7 +1038,10 @@ void gizmo_context::gizmo_context_impl::orientation_gizmo(char const* const name
     const uint32_t id = hash_fnv1a(name);
 
     // interaction_mode will only change on clicked
-    if (has_clicked) gizmos[id].interaction_mode = interact::none;
+    if (has_clicked) 
+        gizmos[id].interaction_mode = interact::none;
+
+    interact transient_hover_mode = interact::none;
 
     {
         interact updated_state = interact::none;
@@ -1060,6 +1067,8 @@ void gizmo_context::gizmo_context_impl::orientation_gizmo(char const* const name
             }
             else gizmos[id].active = false;
         }
+
+        transient_hover_mode = updated_state;
     }
 
     float3 activeAxis;
@@ -1094,7 +1103,7 @@ void gizmo_context::gizmo_context_impl::orientation_gizmo(char const* const name
     {
         gizmo_renderable r;
         r.mesh = mesh_components[c].mesh;
-        r.color = (c == gizmos[id].interaction_mode) ? mesh_components[c].base_color : mesh_components[c].highlight_color;
+        r.color = (c == gizmos[id].interaction_mode || c == transient_hover_mode) ? mesh_components[c].base_color : mesh_components[c].highlight_color;
         for (auto & v : r.mesh.vertices)
         {
             v.position = transform_coord(modelMatrix, v.position); // transform local coordinates into worldspace
@@ -1174,7 +1183,10 @@ void gizmo_context::gizmo_context_impl::scale_gizmo(char const* const name, cons
     const float draw_scale = (active_state.screenspace_scale > 0.f) ? scale_screenspace(float3(p.position), active_state.screenspace_scale) : 1.f;
     const uint32_t id = hash_fnv1a(name);
 
-    if (has_clicked) gizmos[id].interaction_mode = interact::none;
+    if (has_clicked) 
+        gizmos[id].interaction_mode = interact::none;
+
+    interact transient_hover_mode = interact::none;
 
     {
         interact updated_state = interact::none;
@@ -1197,6 +1209,7 @@ void gizmo_context::gizmo_context_impl::scale_gizmo(char const* const name, cons
             }
             else gizmos[id].active = false;
         }
+        transient_hover_mode = updated_state;
     }
 
     if (has_released)
@@ -1225,7 +1238,7 @@ void gizmo_context::gizmo_context_impl::scale_gizmo(char const* const name, cons
     {
         gizmo_renderable r;
         r.mesh = mesh_components[c].mesh;
-        r.color = (c == gizmos[id].interaction_mode) ? mesh_components[c].base_color : mesh_components[c].highlight_color;
+        r.color = (c == gizmos[id].interaction_mode || c == transient_hover_mode) ? mesh_components[c].base_color : mesh_components[c].highlight_color;
         for (auto & v : r.mesh.vertices)
         {
             v.position = transform_coord(modelMatrix, v.position); // transform local coordinates into worldspace
