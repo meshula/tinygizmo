@@ -283,10 +283,7 @@ int main(int argc, char * argv[])
             xform_a_last = xform_a;
         }
 
-        static int foo = 60;
-        if (foo > 0)
-            gizmo_ctx.transform_gizmo("second-example-gizmo", xform_b);
-        --foo;
+        gizmo_ctx.transform_gizmo("second-example-gizmo", xform_b);
 
         static geometry_mesh r; // Combine all gizmo sub-meshes into one super-mesh
         
