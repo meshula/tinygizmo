@@ -4,8 +4,6 @@
 #ifndef tinygizmo_hpp
 #define tinygizmo_hpp
 
-#include <functional> /// @TODO remove when the render callback is removed
-#include <vector>     /// @TODO ditto
 #include <stdint.h> // for uint32_t
 
 namespace tinygizmo
@@ -18,17 +16,9 @@ namespace tinygizmo
     struct v2f { float x, y; };
     struct v3f { float x, y, z; };
     struct v4f { float x, y, z, w; };
-    struct uint3 {
-        uint32_t x, y, z;
-        int operator[] (int j) const { return (&x)[j]; }
-    };
     typedef v4f quatf;
-
-    struct m44f {
-        v4f x, y, z, w;
-        constexpr const v4f& operator[] (int j) const { return (&x)[j]; }
-        v4f& operator[] (int j) { return (&x)[j]; }
-    };
+    struct uint3 { uint32_t x, y, z; };
+    struct m44f { v4f x, y, z, w; };
 
     ///////////////
     //   Gizmo   //
@@ -52,11 +42,6 @@ namespace tinygizmo
         v3f      detransform_point(const v3f& p) const;
         v3f      detransform_vector(const v3f& vec) const;
     };
-
-
-    /// @TODO remove these from here
-    struct geometry_vertex { v3f position, normal; v4f color; };
-    struct geometry_mesh { std::vector<geometry_vertex> vertices; std::vector<uint3> triangles; };
 
     enum class transform_mode
     {
@@ -90,7 +75,6 @@ namespace tinygizmo
         camera_parameters cam;              // Used for constructing inverse view projection for raycasting onto gizmo geometry
     };
 
-    /// @TODO remove render callback
     class gizmo_context
     {
         struct gizmo_context_impl;
@@ -100,14 +84,22 @@ namespace tinygizmo
         gizmo_context();
         ~gizmo_context();
 
-        void update(const gizmo_application_state& state);         // Clear geometry buffer and update internal `gizmo_application_state` data
-        void draw();                                                // Trigger a render callback per call to `update(...)`
-        transform_mode get_mode() const;                            // Return the active mode being used by `transform_gizmo(...)`
-        std::function<void(const geometry_mesh & r)> render;        // Callback to render the gizmo meshes
+        transform_mode get_mode() const;                  // Return the active mode being used by `transform_gizmo(...)`
+
+        void begin(const gizmo_application_state& state); // Clear geometry buffer and update internal `gizmo_application_state` data
+        void end(const gizmo_application_state& state);
+
+        // The following functions are to be called between begin and end.
+
+        // Fills index_buffer with faces to draw the manipulator, up to capacity. Returns desired capacity.
+        // If desired capacity is greater than buffer_capacity, a larger index_buffer should be provided, and faces(...) called again.
+        // Providing a null pointer for index_buffer, or a zero buffer_capacity is a quick way to discover necessary buffer size.
+        size_t triangles(uint32_t* index_buffer, size_t buffer_capacity);
+        size_t vertices(float* vertex_buffer, size_t stride, size_t normal_offset, size_t color_offset, size_t vertex_capacity);
 
         // returns true if the gizmo is hovered, or being manipulated
         /// @TODO use char *const*;
-        bool transform_gizmo(char const*const name, rigid_transform& t);
+        bool transform_gizmo(char const* const name, rigid_transform& t);
     };
 
 

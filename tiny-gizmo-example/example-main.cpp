@@ -97,6 +97,8 @@ constexpr const char lit_frag[] = R"(#version 330
 //   Main Application   //
 //////////////////////////
 
+struct geometry_vertex { v3f position, normal; v4f color; };
+struct geometry_mesh { std::vector<geometry_vertex> vertices; std::vector<uint3> triangles; };
 
 geometry_mesh make_teapot()
 {
@@ -134,13 +136,11 @@ void draw_lit_mesh(GlShader & shader, GlMesh & mesh, const linalg::aliases::floa
 
 void upload_mesh(const geometry_mesh & cpu, GlMesh & gpu)
 {
-    const auto & verts = reinterpret_cast<const std::vector<linalg::aliases::float3> &>(cpu.vertices);
-    const auto & tris = reinterpret_cast<const std::vector<linalg::aliases::uint3> &>(cpu.triangles);
-    gpu.set_vertices(verts, GL_DYNAMIC_DRAW);
+    gpu.set_vertex_data(cpu.vertices.size() * sizeof(cpu.vertices[0]), cpu.vertices.data(), GL_DYNAMIC_DRAW);
     gpu.set_attribute(0, 3, GL_FLOAT, GL_FALSE, sizeof(geometry_vertex), (GLvoid*) offsetof(geometry_vertex, position));
     gpu.set_attribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(geometry_vertex), (GLvoid*) offsetof(geometry_vertex, normal));
     gpu.set_attribute(2, 4, GL_FLOAT, GL_FALSE, sizeof(geometry_vertex), (GLvoid*) offsetof(geometry_vertex, color));
-    gpu.set_elements(tris, GL_DYNAMIC_DRAW);
+    gpu.set_elements(static_cast<GLsizei>(cpu.triangles.size()), reinterpret_cast<const linalg::aliases::uint3*>(cpu.triangles.data()), GL_DYNAMIC_DRAW);
 }
 
 std::unique_ptr<Window> win;
@@ -178,12 +178,6 @@ int main(int argc, char * argv[])
 
     geometry_mesh teapot = make_teapot();
     upload_mesh(teapot, teapotMesh);
-
-    gizmo_ctx.render = [&](const geometry_mesh & r)
-    {
-        upload_mesh(r, gizmoEditorMesh);
-        draw_mesh(wireframeShader, gizmoEditorMesh, cam.position, cam.get_viewproj_matrix((float) windowSize.x / (float) windowSize.y), identity4x4);
-    };
 
     win->on_key = [&](int key, int action, int mods)
     {
@@ -280,17 +274,50 @@ int main(int argc, char * argv[])
 
         //glClear(GL_DEPTH_BUFFER_BIT);
 
-        gizmo_ctx.update(gizmo_state);
+        gizmo_ctx.begin(gizmo_state);
 
         if (gizmo_ctx.transform_gizmo("first-example-gizmo", xform_a))
         {
-//            std::cout << get_local_time_ns() << " - " << "First Gizmo Hovered..." << std::endl;
-//            if (xform_a != xform_a_last) std::cout << get_local_time_ns() << " - " << "First Gizmo Changed..." << std::endl;
+            //std::cout << get_local_time_ns() << " - " << "First Gizmo Hovered..." << std::endl;
+            //if (xform_a != xform_a_last) std::cout << get_local_time_ns() << " - " << "First Gizmo Changed..." << std::endl;
             xform_a_last = xform_a;
         }
 
         gizmo_ctx.transform_gizmo("second-example-gizmo", xform_b);
-        gizmo_ctx.draw();
+
+        static geometry_mesh r; // Combine all gizmo sub-meshes into one super-mesh
+        
+        // update index buffer
+        size_t triangle_count = gizmo_ctx.triangles(reinterpret_cast<uint32_t*>(r.triangles.data()), r.triangles.size());
+        if (triangle_count > r.triangles.size())
+        {
+            r.triangles.resize(triangle_count);
+            triangle_count = gizmo_ctx.triangles(reinterpret_cast<uint32_t*>(r.triangles.data()), r.triangles.size());
+        }
+        else if (triangle_count < r.triangles.size())
+        {
+            r.triangles.resize(triangle_count);
+        }
+
+        // update vertex buffer
+        size_t vertex_count = gizmo_ctx.vertices(reinterpret_cast<float*>(r.vertices.data()), sizeof(r.vertices[0]),
+                                                 sizeof(float) * 3, sizeof(float) * 6, r.vertices.size());
+        if (vertex_count > r.vertices.size())
+        {
+            r.vertices.resize(vertex_count);
+            size_t vertex_count = gizmo_ctx.vertices(reinterpret_cast<float*>(r.vertices.data()), sizeof(r.vertices[0]),
+                sizeof(float) * 3, sizeof(float) * 6, r.vertices.size());
+        }
+        else if (vertex_count < r.vertices.size())
+        {
+            r.vertices.resize(vertex_count);
+        }
+
+        upload_mesh(r, gizmoEditorMesh);
+        draw_mesh(wireframeShader, gizmoEditorMesh, cam.position, cam.get_viewproj_matrix((float)windowSize.x / (float)windowSize.y), identity4x4);
+
+        //gizmo_ctx.draw();
+        gizmo_ctx.end(gizmo_state);
 
         gl_check_error(__FILE__, __LINE__);
 

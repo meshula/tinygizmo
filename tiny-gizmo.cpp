@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <functional>
 #include <map>
 #include <memory>       
 #include <vector>
@@ -17,8 +16,8 @@
 #endif
 
 // This library includes an inline version of linalg.h (https://github.com/sgorsten/linalg) in a separate minalg
-// namespace. This is to reduce the number of files in this library to 2, without a separate header specifically
-// for 3d math. 
+// namespace. This inclusion is in order to eliminate any dependencies except for the C++ standard library.
+//
 namespace minalg
 {
     // Small, fixed-length vector type, consisting of exactly M elements of type T, and presumed to be a column-vector unless otherwise noted
@@ -490,6 +489,9 @@ float4 make_rotation_quat_between_vectors_snapped(const float3 & from, const flo
 
 template<typename T> T clamp(const T & val, const T & min, const T & max) { return std::min(std::max(val, min), max); }
 
+struct geometry_vertex { minalg::float3 position, normal; minalg::float4 color; };
+struct geometry_mesh { std::vector<geometry_vertex> vertices; std::vector<minalg::uint3> triangles; };
+
 struct gizmo_mesh_component { geometry_mesh mesh; float4 base_color, highlight_color; };
 struct gizmo_renderable { geometry_mesh mesh; float4 color; };
 
@@ -587,13 +589,13 @@ void compute_normals(geometry_mesh & mesh)
 
         geometry_vertex& v0 = mesh.vertices[idx0], & v1 = mesh.vertices[idx1], & v2 = mesh.vertices[idx2];
         const float3 n = cross(float3(v1.position) - float3(v0.position), float3(v2.position) - float3(v0.position));
-        v0.normal = (float3(v0.normal) + n).v3f();
-        v1.normal = (float3(v1.normal) + n).v3f();
-        v2.normal = (float3(v2.normal) + n).v3f();
+        v0.normal += n;
+        v1.normal += n;
+        v2.normal += n;
     }
 
     for (uint32_t i = 0; i < mesh.vertices.size(); ++i) mesh.vertices[i].normal = mesh.vertices[uniqueVertIndices[i] - 1].normal;
-    for (geometry_vertex & v : mesh.vertices) v.normal = normalize(float3(v.normal)).v3f();
+    for (geometry_vertex & v : mesh.vertices) v.normal = normalize(v.normal);
 }
 
 geometry_mesh make_box_geometry(const float3 & min_bounds, const float3 & max_bounds)
@@ -629,8 +631,8 @@ geometry_mesh make_cylinder_geometry(const float3 & axis, const float3 & arm1, c
     {
         const float tex_s = static_cast<float>(i) / slices, angle = (float)(i%slices) * tau / slices;
         const float3 arm = arm1 * std::cos(angle) + arm2 * std::sin(angle);
-        mesh.vertices.push_back({ arm.v3f(), normalize(arm).v3f() });
-        mesh.vertices.push_back({ (arm + axis).v3f(), normalize(arm).v3f() });
+        mesh.vertices.push_back({ arm, normalize(arm) });
+        mesh.vertices.push_back({ arm + axis, normalize(arm) });
     }
     for (uint32_t i = 0; i < slices; ++i)
     {
@@ -644,8 +646,8 @@ geometry_mesh make_cylinder_geometry(const float3 & axis, const float3 & arm1, c
     {
         const float angle = static_cast<float>(i%slices) * tau / slices, c = std::cos(angle), s = std::sin(angle);
         const float3 arm = arm1 * c + arm2 * s;
-        mesh.vertices.push_back({ (arm + axis).v3f(), normalize(axis).v3f() });
-        mesh.vertices.push_back({ arm.v3f(), (-normalize(axis)).v3f() });
+        mesh.vertices.push_back({ arm + axis, normalize(axis) });
+        mesh.vertices.push_back({ arm, -normalize(axis) });
     }
     for (uint32_t i = 2; i < slices; ++i)
     {
@@ -662,7 +664,7 @@ geometry_mesh make_lathed_geometry(const float3 & axis, const float3 & arm1, con
     {
         const float angle = (static_cast<float>(i % slices) * tau / slices) + (tau/8.f), c = std::cos(angle), s = std::sin(angle);
         const float3x2 mat = { axis, arm1 * c + arm2 * s };
-        for (auto & p : points) mesh.vertices.push_back({ (mul(mat, p) + eps).v3f(), v3f{ 0.f, 0.f, 0.f} });
+        for (auto & p : points) mesh.vertices.push_back({ mul(mat, p) + eps, float3{ 0.f, 0.f, 0.f} });
 
         if (i > 0)
         {
@@ -752,7 +754,6 @@ struct gizmo_context::gizmo_context_impl
     void scale_gizmo(const std::string& name, const float4& orientation, const float3& center, float3& scale);
     void axis_scale_dragger(const uint32_t& id, const float3& axis, const float3& center, float3& scale, const bool uniform);
     void orientation_gizmo(const std::string& name, const float3& center, float4& orientation);
-    bool transform_gizmo(const std::string& name, gizmo_context& g, rigid_transform& t);
     void axis_rotation_dragger(const uint32_t id, const float3& axis, const float3& center, const float4& start_orientation, float4& orientation);
     void plane_translation_dragger(const uint32_t id, const float3& plane_normal, float3& point);
     void axis_translation_dragger(const uint32_t id, const float3& axis, float3& point);
@@ -760,7 +761,9 @@ struct gizmo_context::gizmo_context_impl
 
     // Public methods
     void update(const gizmo_application_state & state);
-    void draw();
+    size_t draw();
+    size_t triangles(uint32_t* index_buffer, size_t index_capacity);
+    size_t vertices(float* vertex_buffer, size_t stride, size_t normal_offset, size_t color_offset, size_t vertex_capacity);
 };
 
 gizmo_context::gizmo_context_impl::gizmo_context_impl(gizmo_context * ctx) : ctx(ctx)
@@ -792,22 +795,53 @@ void gizmo_context::gizmo_context_impl::update(const gizmo_application_state & s
     drawlist.clear();
 }
 
-void gizmo_context::gizmo_context_impl::draw()
+size_t gizmo_context::gizmo_context_impl::vertices(float* vertex_buffer, size_t stride, size_t normal_offset, size_t color_offset, size_t vertex_capacity)
 {
-    if (ctx->render)
+    size_t required_count = 0;
+    for (auto& m : drawlist)
     {
-        geometry_mesh r; // Combine all gizmo sub-meshes into one super-mesh
-        for (auto & m : drawlist)
+        if (vertex_buffer && vertex_capacity >= m.mesh.vertices.size())
         {
-            uint32_t numVerts = (uint32_t) r.vertices.size();
-            auto it = r.vertices.insert(r.vertices.end(), m.mesh.vertices.begin(), m.mesh.vertices.end());
-            for (auto & f : m.mesh.triangles) r.triangles.push_back({numVerts + f.x, numVerts + f.y, numVerts + f.z });
-            for (; it != r.vertices.end(); ++it) it->color = m.color.v4f(); // Take the color and shove it into a per-vertex attribute
+            for (geometry_vertex& v : m.mesh.vertices)
+            {
+                float* next_vertex = reinterpret_cast<float*>(reinterpret_cast<char*>(vertex_buffer) + stride);
+                float* normals = reinterpret_cast<float*>(reinterpret_cast<char*>(vertex_buffer) + normal_offset);
+                float* colors = reinterpret_cast<float*>(reinterpret_cast<char*>(vertex_buffer) + color_offset);
+                *vertex_buffer++ = v.position.x; *vertex_buffer++ = v.position.y; *vertex_buffer++ = v.position.z;
+                *normals++ = v.normal.x; *normals++ = v.normal.y; *normals++ = v.normal.z;
+                *colors++ = m.color.x; *colors++ = m.color.y; *colors++ = m.color.z; *colors++ = m.color.w;
+                vertex_buffer = next_vertex;
+            }
+            vertex_capacity -= m.mesh.vertices.size();
         }
-        ctx->render(r);
+        required_count += m.mesh.vertices.size();
     }
-    last_state = active_state;
+    return required_count;
 }
+
+size_t gizmo_context::gizmo_context_impl::triangles(uint32_t* index_buffer, size_t triangle_capacity)
+{
+    size_t triangle_count = 0;
+    size_t numVerts = 0;
+    for (auto& m : drawlist)
+    {
+        if (index_buffer && triangle_capacity >= m.mesh.triangles.size())
+        {
+            for (auto& f : m.mesh.triangles)
+            {
+                *index_buffer++ = static_cast<uint32_t>(numVerts + f.x);
+                *index_buffer++ = static_cast<uint32_t>(numVerts + f.y);
+                *index_buffer++ = static_cast<uint32_t>(numVerts + f.z);
+                triangle_capacity -= 1;
+            }
+            numVerts += m.mesh.vertices.size();
+        }
+        triangle_count += m.mesh.triangles.size();
+    }
+    return triangle_count;
+}
+
+
 
 // This will calculate a scale constant based on the number of screenspace pixels passed as pixel_scale.
 float gizmo_context::gizmo_context_impl::scale_screenspace( const float3 position, const float pixel_scale)
@@ -994,8 +1028,8 @@ void gizmo_context::gizmo_context_impl::position_gizmo(const std::string & name,
         r.color = (c == gizmos[id].interaction_mode) ? mesh_components[c].base_color : mesh_components[c].highlight_color;
         for (auto & v : r.mesh.vertices)
         {
-            v.position = transform_coord(modelMatrix, float3(v.position)).v3f(); // transform local coordinates into worldspace
-            v.normal = transform_vector(modelMatrix, float3(v.normal)).v3f();
+            v.position = transform_coord(modelMatrix, v.position); // transform local coordinates into worldspace
+            v.normal = transform_vector(modelMatrix, v.normal);
         }
         drawlist.push_back(r);
     }
@@ -1073,8 +1107,8 @@ void gizmo_context::gizmo_context_impl::orientation_gizmo(const std::string & na
         r.color = (c == gizmos[id].interaction_mode) ? mesh_components[c].base_color : mesh_components[c].highlight_color;
         for (auto & v : r.mesh.vertices)
         {
-            v.position = transform_coord(modelMatrix, float3(v.position)).v3f(); // transform local coordinates into worldspace
-            v.normal = transform_vector(modelMatrix, float3(v.normal)).v3f();
+            v.position = transform_coord(modelMatrix, v.position); // transform local coordinates into worldspace
+            v.normal = transform_vector(modelMatrix, v.normal);
         }
         drawlist.push_back(r);
     }
@@ -1098,8 +1132,8 @@ void gizmo_context::gizmo_context_impl::orientation_gizmo(const std::string & na
         r.color = float4(1);
         for (auto & v : r.mesh.vertices)
         {
-            v.position = transform_coord(modelMatrix, float3(v.position)).v3f();
-            v.normal = transform_vector(modelMatrix, float3(v.normal)).v3f();
+            v.position = transform_coord(modelMatrix, v.position);
+            v.normal = transform_vector(modelMatrix, v.normal);
         }
         drawlist.push_back(r);
 
@@ -1204,8 +1238,8 @@ void gizmo_context::gizmo_context_impl::scale_gizmo(const std::string & name, co
         r.color = (c == gizmos[id].interaction_mode) ? mesh_components[c].base_color : mesh_components[c].highlight_color;
         for (auto & v : r.mesh.vertices)
         {
-            v.position = transform_coord(modelMatrix, float3(v.position)).v3f(); // transform local coordinates into worldspace
-            v.normal = transform_vector(modelMatrix, float3(v.normal)).v3f();
+            v.position = transform_coord(modelMatrix, v.position); // transform local coordinates into worldspace
+            v.normal = transform_vector(modelMatrix, v.normal);
         }
         drawlist.push_back(r);
     }
@@ -1218,9 +1252,14 @@ void gizmo_context::gizmo_context_impl::scale_gizmo(const std::string & name, co
 
 gizmo_context::gizmo_context() { impl = new gizmo_context_impl(this); };
 gizmo_context::~gizmo_context() { delete impl; }
-void gizmo_context::update(const gizmo_application_state & state) { impl->update(state); }
-void gizmo_context::draw() { impl->draw(); }
+void gizmo_context::begin(const gizmo_application_state & state) { impl->update(state); }
+void gizmo_context::end(const gizmo_application_state& state) { impl->last_state = impl->active_state;; }
 transform_mode gizmo_context::get_mode() const { return impl->mode; }
+size_t gizmo_context::triangles(uint32_t* index_buffer, size_t triangle_capacity) { return impl->triangles(index_buffer, triangle_capacity); }
+size_t gizmo_context::vertices(float* vertex_buffer, size_t stride, size_t normal_offset, size_t color_offset, size_t vertex_capacity)
+{
+    return impl->vertices(vertex_buffer, stride, normal_offset, color_offset, vertex_capacity);
+}
 
 bool tinygizmo::gizmo_context::transform_gizmo(char const*const name, rigid_transform & t)
 {
