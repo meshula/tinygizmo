@@ -29,8 +29,8 @@ namespace tinygizmo
         rigid_transform(const v4f& orientation, const v3f& position, float scale) : orientation(orientation), position(position), scale{ scale, scale, scale } {}
         rigid_transform(const v4f& orientation, const v3f& position) : orientation(orientation), position(position) {}
 
-        v3f      position{ 0,0,0 };
         v4f      orientation{ 0,0,0,1 };
+        v3f      position{ 0,0,0 };
         v3f      scale{ 1,1,1 };
 
         bool     uniform_scale() const { return scale.x == scale.y && scale.x == scale.z; }
@@ -92,8 +92,8 @@ namespace tinygizmo
         // Fills index_buffer with faces to draw all gizmos, up to capacity. Returns desired capacity.
         // If desired capacity is greater than buffer_capacity, a larger index_buffer should be provided, and faces(...) called again.
         // Providing a null pointer for index_buffer, or a zero buffer_capacity is a quick way to discover necessary buffer size.
-        size_t triangles(uint32_t* index_buffer, size_t buffer_capacity);
-        size_t vertices(float* vertex_buffer, size_t stride, size_t normal_offset, size_t color_offset, size_t vertex_capacity);
+        int triangles(uint32_t* index_buffer, int buffer_capacity);
+        int vertices(float* vertex_buffer, int stride, int normal_offset, int color_offset, int vertex_capacity);
 
         // returns true if the gizmo is hovered, or being manipulated.
         // call once for every active transform gizmo.

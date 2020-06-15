@@ -11,10 +11,10 @@
 
 #define GLEW_STATIC
 #define GL_GLEXT_PROTOTYPES
-#include "glew.h"
+#include "GL/glew.h"
 
 #define GLFW_INCLUDE_GLU
-#include "GLFW\glfw3.h"
+#include "GLFW/glfw3.h"
 
 #include "../tiny-gizmo.hpp"
 #include "linalg.h"
@@ -66,7 +66,17 @@ public:
 
     Window(int width, int height, const char * title)
     {
+        glewExperimental = GL_TRUE;
         if (glfwInit() == GL_FALSE) throw std::runtime_error("glfwInit() failed");
+
+        // Define version and compatibility settings
+        // this must occur after init and before create window.
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+        glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+        glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+
         window = glfwCreateWindow(width, height, title, nullptr, nullptr);
         if (!window) throw std::runtime_error("glfwCreateWindow() failed");
 
@@ -76,6 +86,8 @@ public:
         {
             throw std::runtime_error(std::string("glewInit() failed - ") + (const char *)glewGetErrorString(err));
         }
+        
+        std::cout << "GL_SHADING_LANGUAGE_VERSION: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
 
         glfwSetCharCallback(window, [](GLFWwindow * window, unsigned int codepoint) {
             auto w = (Window *)glfwGetWindowUserPointer(window); if (w->on_char) w->on_char(codepoint);

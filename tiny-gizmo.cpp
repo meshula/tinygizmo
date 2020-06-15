@@ -414,20 +414,20 @@ template<class T> T minalg::determinant(const mat<T, 4, 4>& a)
 //////////////////////////
 //   Linalg Utilities   //
 //////////////////////////
-
+#if 0
 template<class T> std::ostream& operator << (std::ostream& a, minalg::vec<T, 2>& b) { return a << '{' << b.x << ", " << b.y << '}'; }
 template<class T> std::ostream& operator << (std::ostream& a, minalg::vec<T, 3>& b) { return a << '{' << b.x << ", " << b.y << ", " << b.z << '}'; }
 template<class T> std::ostream& operator << (std::ostream& a, minalg::vec<T, 4>& b) { return a << '{' << b.x << ", " << b.y << ", " << b.z << ", " << b.w << '}'; }
 template<class T, int N> std::ostream& operator << (std::ostream& a, const minalg::mat<T, 3, N>& b) { return a << '\n' << b.row(0) << '\n' << b.row(1) << '\n' << b.row(2) << '\n'; }
 template<class T, int N> std::ostream& operator << (std::ostream& a, const minalg::mat<T, 4, N>& b) { return a << '\n' << b.row(0) << '\n' << b.row(1) << '\n' << b.row(2) << '\n' << b.row(3) << '\n'; }
-
-using namespace minalg;
-using namespace tinygizmo;
+#endif
 
 ///////////////////////
 //   Utility Math    //
 ///////////////////////
 
+using namespace minalg;
+using namespace tinygizmo;
 
 static const float4x4 Identity4x4 = { { 1, 0, 0, 0 },{ 0, 1, 0, 0 },{ 0, 0, 1, 0 },{ 0, 0, 0, 1 } };
 static const float3x3 Identity3x3 = { { 1, 0, 0 },{ 0, 1, 0 },{ 0, 0, 1 } };
@@ -1258,8 +1258,8 @@ gizmo_context::~gizmo_context() { delete impl; }
 void gizmo_context::begin(const gizmo_application_state & state) { impl->update(state); }
 void gizmo_context::end(const gizmo_application_state& state) { impl->last_state = impl->active_state;; }
 transform_mode gizmo_context::get_mode() const { return impl->mode; }
-size_t gizmo_context::triangles(uint32_t* index_buffer, size_t triangle_capacity) { return impl->triangles(index_buffer, triangle_capacity); }
-size_t gizmo_context::vertices(float* vertex_buffer, size_t stride, size_t normal_offset, size_t color_offset, size_t vertex_capacity)
+int gizmo_context::triangles(uint32_t* index_buffer, int triangle_capacity) { return impl->triangles(index_buffer, triangle_capacity); }
+int gizmo_context::vertices(float* vertex_buffer, int stride, int normal_offset, int color_offset, int vertex_capacity)
 {
     return impl->vertices(vertex_buffer, stride, normal_offset, color_offset, vertex_capacity);
 }

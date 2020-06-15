@@ -86,7 +86,9 @@ namespace
         auto typeStr = gl_enum_to_str(type);
         auto severityStr = gl_severity_to_str(severity);
         std::cout << "gl_debug_callback: " << sourceStr << ", " << severityStr << ", " << typeStr << " , " << id << ", " << message << std::endl;
+#ifdef __WIN32
         if ((type == GL_DEBUG_TYPE_ERROR) && (gEnableGLDebugOutputErrorBreakpoints)) __debugbreak();
+#endif
     }
 
     inline void gl_check_error(const char * file, int32_t line)
@@ -129,7 +131,7 @@ class GlObject
     std::string n;
 public:
     GlObject() {}
-    GlObject(GLuint h) : handle(g) {}
+    GlObject(GLuint h) : handle(h) {}
     ~GlObject() { if (handle) factory_t::destroy(handle); }
     GlObject(const GlObject & r) = delete;
     GlObject & operator = (GlObject && r) { std::swap(handle, r.handle); std::swap(n, r.n);  return *this; }
@@ -167,9 +169,9 @@ struct GlBuffer : public GlBufferObject
 {
     GLsizeiptr size;
     GlBuffer() {}
-    void set_buffer_data(const GLsizeiptr s, const GLvoid * data, const GLenum usage) { this->size = s; glNamedBufferDataEXT(*this, size, data, usage);  }
+    void set_buffer_data(const GLsizeiptr s, const GLvoid * data, const GLenum usage) { this->size = s; glNamedBufferData(*this, size, data, usage);  }
     void set_buffer_data(const std::vector<GLubyte> & bytes, const GLenum usage) { set_buffer_data(bytes.size(), bytes.data(), usage); }
-    void set_buffer_sub_data(const GLsizeiptr s, const GLintptr offset, const GLvoid * data) { glNamedBufferSubDataEXT(*this, offset, s, data);  }
+    void set_buffer_sub_data(const GLsizeiptr s, const GLintptr offset, const GLvoid * data) { glNamedBufferSubData(*this, offset, s, data);  }
     void set_buffer_sub_data(const std::vector<GLubyte> & bytes, const GLintptr offset, const GLenum usage) { set_buffer_sub_data(bytes.size(), offset, bytes.data()); }
 };
 
