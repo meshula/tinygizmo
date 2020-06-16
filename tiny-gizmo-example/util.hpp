@@ -9,7 +9,7 @@
 #include <functional>
 #include <vector>
 
-#define GLEW_STATIC
+//#define GLEW_STATIC
 #define GL_GLEXT_PROTOTYPES
 #include "GL/glew.h"
 
