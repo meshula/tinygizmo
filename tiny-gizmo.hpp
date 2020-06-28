@@ -93,6 +93,8 @@ namespace tinygizmo
         // If desired capacity is greater than buffer_capacity, a larger index_buffer should be provided, and faces(...) called again.
         // Providing a null pointer for index_buffer, or a zero buffer_capacity is a quick way to discover necessary buffer size.
         int triangles(uint32_t* index_buffer, int buffer_capacity);
+
+        // position:v3f, normal::v3f, color::v4f
         int vertices(float* vertex_buffer, int stride, int normal_offset, int color_offset, int vertex_capacity);
 
         // returns true if the gizmo is hovered, or being manipulated.

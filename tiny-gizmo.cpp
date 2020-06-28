@@ -790,21 +790,27 @@ size_t gizmo_context::gizmo_context_impl::vertices(float* vertex_buffer, size_t 
     size_t required_count = 0;
     for (auto& m : drawlist)
     {
-        if (vertex_buffer && vertex_capacity >= m.mesh.vertices.size())
+        required_count += m.mesh.vertices.size();
+
+        if (vertex_buffer && (vertex_capacity >= m.mesh.vertices.size()))
         {
+            int index = 0;
             for (geometry_vertex& v : m.mesh.vertices)
             {
-                float* next_vertex = reinterpret_cast<float*>(reinterpret_cast<char*>(vertex_buffer) + stride);
-                float* normals = reinterpret_cast<float*>(reinterpret_cast<char*>(vertex_buffer) + normal_offset);
-                float* colors = reinterpret_cast<float*>(reinterpret_cast<char*>(vertex_buffer) + color_offset);
-                *vertex_buffer++ = v.position.x; *vertex_buffer++ = v.position.y; *vertex_buffer++ = v.position.z;
-                *normals++ = v.normal.x; *normals++ = v.normal.y; *normals++ = v.normal.z;
-                *colors++ = m.color.x; *colors++ = m.color.y; *colors++ = m.color.z; *colors++ = m.color.w;
-                vertex_buffer = next_vertex;
+                uintptr_t vertex_addr = reinterpret_cast<uintptr_t>(vertex_buffer) + stride * index;
+
+                float* pos = reinterpret_cast<float*>(vertex_addr);
+                float* normal = reinterpret_cast<float*>(vertex_addr + normal_offset);
+                float* color = reinterpret_cast<float*>(vertex_addr + color_offset);
+
+                pos[0] = v.position.x; pos[1] = v.position.y; pos[2] = v.position.z;
+                normal[0] = v.normal.x; normal[1] = v.normal.y; normal[2] = v.normal.z;
+                color[0] = m.color.x; color[1] = m.color.y; color[2] = m.color.z; color[3] = m.color.w;
+
+                ++index;
             }
             vertex_capacity -= m.mesh.vertices.size();
         }
-        required_count += m.mesh.vertices.size();
     }
     return required_count;
 }
@@ -1258,10 +1264,10 @@ gizmo_context::~gizmo_context() { delete impl; }
 void gizmo_context::begin(const gizmo_application_state & state) { impl->update(state); }
 void gizmo_context::end(const gizmo_application_state& state) { impl->last_state = impl->active_state;; }
 transform_mode gizmo_context::get_mode() const { return impl->mode; }
-int gizmo_context::triangles(uint32_t* index_buffer, int triangle_capacity) { return impl->triangles(index_buffer, triangle_capacity); }
+int gizmo_context::triangles(uint32_t* index_buffer, int triangle_capacity) { return (int) impl->triangles(index_buffer, triangle_capacity); }
 int gizmo_context::vertices(float* vertex_buffer, int stride, int normal_offset, int color_offset, int vertex_capacity)
 {
-    return impl->vertices(vertex_buffer, stride, normal_offset, color_offset, vertex_capacity);
+    return (int) impl->vertices(vertex_buffer, stride, normal_offset, color_offset, vertex_capacity);
 }
 
 bool tinygizmo::gizmo_context::transform_gizmo(char const*const name, rigid_transform & t)

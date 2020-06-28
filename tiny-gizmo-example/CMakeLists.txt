@@ -120,7 +120,7 @@ elseif (APPLE)
 endif()
 
 target_link_libraries(tinygizmo_example
-    ${PLATFORM_LIBS} ${GLEW_LIBRARY_RELEASE} glfw tinygizmo
+    ${PLATFORM_LIBS} ${GLEW_SHARED_LIBRARY_RELEASE} glfw tinygizmo
     )
 
 #-------------------------------------------------------------------------------
