@@ -52,12 +52,8 @@ namespace tinygizmo
 
     struct gizmo_application_state
     {
-        bool mouse_left{ false };           // set to indicate that LMB is pressed
-        bool hotkey_ctrl{ false };          // set to indicate that the modes for the following hotkeys are to be activated
-        bool hotkey_translate{ false };     // set to indicate the hotkey to activate translation is pressed
-        bool hotkey_rotate{ false };
-        bool hotkey_scale{ false };
-        bool hotkey_local{ false };
+        bool mouse_left{ false };           // indicates that LMB is pressed
+        bool modifier_active{ false };      // indicates an active interaction modifier, for example the control key
 
         float screenspace_scale{ 0.f };     // If > 0.f, the gizmos are drawn scale-invariant with a screenspace value defined here
         float snap_translation{ 0.f };      // World-scale units used for snapping translation
@@ -72,6 +68,7 @@ namespace tinygizmo
     };
 
     enum class transform_mode { translate, rotate, scale };
+    enum class reference_frame { local, global };
 
     class gizmo_context
     {
@@ -82,7 +79,10 @@ namespace tinygizmo
         gizmo_context();
         ~gizmo_context();
 
-        transform_mode get_mode() const;  // Return the active mode being used by `transform_gizmo(...)`
+        transform_mode get_mode() const;
+        void set_mode(transform_mode);
+        reference_frame get_frame() const;
+        void set_frame(reference_frame);
 
         void begin(const gizmo_application_state & state); // Clear geometry buffer and update internal `gizmo_application_state` data
         void end(const gizmo_application_state & state);

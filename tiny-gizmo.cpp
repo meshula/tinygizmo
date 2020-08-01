@@ -730,12 +730,12 @@ struct gizmo_context::gizmo_context_impl
     std::vector<gizmo_renderable> drawlist;
 
     transform_mode mode{ transform_mode::translate };
+    reference_frame frame{ reference_frame::local };
 
     std::map<uint32_t, interaction_state> gizmos;
 
     gizmo_application_state active_state;
     gizmo_application_state last_state;
-    bool local_toggle{ true };              // State to describe if the gizmo should use transform-local math
     bool has_clicked{ false };              // State to describe if the user has pressed the left mouse button during the last frame
     bool has_released{ false };             // State to describe if the user has released the left mouse button during the last frame
 
@@ -779,7 +779,6 @@ gizmo_context::gizmo_context_impl::gizmo_context_impl(gizmo_context * ctx) : ctx
 void gizmo_context::gizmo_context_impl::update(const gizmo_application_state & state)
 {
     active_state = state;
-    local_toggle = (!last_state.hotkey_local && active_state.hotkey_local && active_state.hotkey_ctrl) ? !local_toggle : local_toggle;
     has_clicked = (!last_state.mouse_left && active_state.mouse_left) ? true : false;
     has_released = (last_state.mouse_left && !active_state.mouse_left) ? true : false;
     drawlist.clear();
@@ -943,6 +942,7 @@ void gizmo_context::gizmo_context_impl::axis_translation_dragger(const uint32_t 
 
 void gizmo_context::gizmo_context_impl::position_gizmo(char const* const name, const float4 & orientation, float3 & position)
 {
+    bool local_toggle = frame == reference_frame::local;
     rigid_transform p = rigid_transform(local_toggle ? orientation.v4f() : v4f{ 0, 0, 0, 1 }, position.v3f());
     const float draw_scale = (active_state.screenspace_scale > 0.f) ? scale_screenspace(float3(p.position), active_state.screenspace_scale) : 1.f;
     const uint32_t id = hash_fnv1a(name);
@@ -1039,6 +1039,7 @@ void gizmo_context::gizmo_context_impl::orientation_gizmo(char const* const name
 {
     assert(length2(orientation) > float(1e-6));
 
+    bool local_toggle = frame == reference_frame::local;
     rigid_transform p = rigid_transform(local_toggle ? orientation.v4f() : v4f{ 0, 0, 0, 1 }, center.v3f()); // Orientation is local by default
     const float draw_scale = (active_state.screenspace_scale > 0.f) ? scale_screenspace(float3(p.position), active_state.screenspace_scale) : 1.f;
     const uint32_t id = hash_fnv1a(name);
@@ -1228,9 +1229,9 @@ void gizmo_context::gizmo_context_impl::scale_gizmo(char const* const name, cons
     {
         switch (gizmos[id].interaction_mode)
         {
-        case interact::scale_x: axis_scale_dragger(id, { 1,0,0 }, center, scale, active_state.hotkey_ctrl); break;
-        case interact::scale_y: axis_scale_dragger(id, { 0,1,0 }, center, scale, active_state.hotkey_ctrl); break;
-        case interact::scale_z: axis_scale_dragger(id, { 0,0,1 }, center, scale, active_state.hotkey_ctrl); break;
+        case interact::scale_x: axis_scale_dragger(id, { 1,0,0 }, center, scale, active_state.modifier_active); break;
+        case interact::scale_y: axis_scale_dragger(id, { 0,1,0 }, center, scale, active_state.modifier_active); break;
+        case interact::scale_z: axis_scale_dragger(id, { 0,0,1 }, center, scale, active_state.modifier_active); break;
         }
     }
 
@@ -1264,6 +1265,10 @@ gizmo_context::~gizmo_context() { delete impl; }
 void gizmo_context::begin(const gizmo_application_state & state) { impl->update(state); }
 void gizmo_context::end(const gizmo_application_state& state) { impl->last_state = impl->active_state;; }
 transform_mode gizmo_context::get_mode() const { return impl->mode; }
+void gizmo_context::set_mode(transform_mode m) { impl->mode = m; }
+reference_frame gizmo_context::get_frame() const { return impl->frame; }
+void gizmo_context::set_frame(reference_frame f) { impl->frame = f; }
+
 int gizmo_context::triangles(uint32_t* index_buffer, int triangle_capacity) { return (int) impl->triangles(index_buffer, triangle_capacity); }
 int gizmo_context::vertices(float* vertex_buffer, int stride, int normal_offset, int color_offset, int vertex_capacity)
 {
@@ -1272,13 +1277,6 @@ int gizmo_context::vertices(float* vertex_buffer, int stride, int normal_offset,
 
 bool tinygizmo::gizmo_context::transform_gizmo(char const*const name, rigid_transform & t)
 {
-    if (impl->active_state.hotkey_ctrl == true)
-    {
-        if (impl->active_state.hotkey_translate == true) impl->mode = transform_mode::translate;
-        else if (impl->active_state.hotkey_rotate == true) impl->mode = transform_mode::rotate;
-        else if (impl->active_state.hotkey_scale == true) impl->mode = transform_mode::scale;
-    }
-
     float4 orientation(t.orientation);
     float3 position(t.position);
     float3 scale(t.scale);
