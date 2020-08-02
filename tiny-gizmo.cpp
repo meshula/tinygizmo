@@ -784,19 +784,21 @@ void gizmo_context::gizmo_context_impl::update(const gizmo_application_state & s
     drawlist.clear();
 }
 
-size_t gizmo_context::gizmo_context_impl::vertices(float* vertex_buffer, size_t stride, size_t normal_offset, size_t color_offset, size_t vertex_capacity)
+size_t gizmo_context::gizmo_context_impl::vertices(float* vertex_buffer, 
+    size_t stride, 
+    size_t normal_offset, size_t color_offset, size_t vertex_capacity)
 {
     size_t required_count = 0;
+    int index = 0;
     for (auto& m : drawlist)
     {
         required_count += m.mesh.vertices.size();
 
         if (vertex_buffer && (vertex_capacity >= m.mesh.vertices.size()))
         {
-            int index = 0;
             for (geometry_vertex& v : m.mesh.vertices)
             {
-                uintptr_t vertex_addr = reinterpret_cast<uintptr_t>(vertex_buffer) + stride * index;
+                uintptr_t vertex_addr = reinterpret_cast<uintptr_t>(vertex_buffer) + (stride * index);
 
                 float* pos = reinterpret_cast<float*>(vertex_addr);
                 float* normal = reinterpret_cast<float*>(vertex_addr + normal_offset);
