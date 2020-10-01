@@ -1002,6 +1002,8 @@ void gizmo_context::gizmo_context_impl::position_gizmo(char const* const name, c
         case interact::translate_zx: plane_translation_dragger(id, axes[1], position); break;
         case interact::translate_xy: plane_translation_dragger(id, axes[2], position); break;
         case interact::translate_xyz: plane_translation_dragger(id, -minalg::qzdir(float4(active_state.cam.orientation)), position); break;
+        default:
+            break;
         }
         position -= gizmos[id].click_offset;
     }
@@ -1090,6 +1092,7 @@ void gizmo_context::gizmo_context_impl::orientation_gizmo(char const* const name
         case interact::rotate_x: axis_rotation_dragger(id, { 1, 0, 0 }, center, starting_orientation, orientation); activeAxis = { 1, 0, 0 }; break;
         case interact::rotate_y: axis_rotation_dragger(id, { 0, 1, 0 }, center, starting_orientation, orientation); activeAxis = { 0, 1, 0 }; break;
         case interact::rotate_z: axis_rotation_dragger(id, { 0, 0, 1 }, center, starting_orientation, orientation); activeAxis = { 0, 0, 1 }; break;
+        default: break;
         }
         p.orientation = orientation.v4f();
     }
@@ -1234,6 +1237,7 @@ void gizmo_context::gizmo_context_impl::scale_gizmo(char const* const name, cons
         case interact::scale_x: axis_scale_dragger(id, { 1,0,0 }, center, scale, active_state.modifier_active); break;
         case interact::scale_y: axis_scale_dragger(id, { 0,1,0 }, center, scale, active_state.modifier_active); break;
         case interact::scale_z: axis_scale_dragger(id, { 0,0,1 }, center, scale, active_state.modifier_active); break;
+        default: break;
         }
     }
 
