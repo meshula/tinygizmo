@@ -33,7 +33,7 @@ namespace tinygizmo
         v3f      position{ 0,0,0 };
         v3f      scale{ 1,1,1 };
 
-        bool     uniform_scale() const { return scale.x == scale.y && scale.x == scale.z; }
+        bool     is_uniform_scale() const { return scale.x == scale.y && scale.x == scale.z; }
         m44f     matrix() const;
         v3f      transform_vector(const v3f& vec) const;
         v3f      transform_point(const v3f& p) const;
