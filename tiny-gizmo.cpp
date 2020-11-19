@@ -20,6 +20,7 @@
 
 // This library includes an inline version of linalg.h (https://github.com/sgorsten/linalg) in a separate minalg
 // namespace. This inclusion is in order to eliminate any dependencies except for the C++ standard library.
+// The linalg code is licensed under the unlicense license.
 //
 namespace minalg
 {
@@ -37,6 +38,7 @@ namespace minalg
         constexpr const T& operator[] (int i) const { return (&x)[i]; }
         T& operator[] (int i) { return (&x)[i]; }
     };
+
     template<class T> struct vec<T, 3>
     {
         T                           x, y, z;
@@ -54,6 +56,7 @@ namespace minalg
         vec<T, 2>& xy() { return *reinterpret_cast<vec<T, 2>*>(this); }
         const tinygizmo::v3f v3f() const { return *(reinterpret_cast<const tinygizmo::v3f*>(this)); }
     };
+
     template<class T> struct vec<T, 4>
     {
         T                            x, y, z, w;
@@ -91,6 +94,7 @@ namespace minalg
         constexpr const V& operator[] (int j) const { return (&x)[j]; }
         V& operator[] (int j) { return (&x)[j]; }
     };
+
     template<class T, int M> struct mat<T, M, 3>
     {
         typedef vec<T, M>           V;
@@ -105,6 +109,7 @@ namespace minalg
         constexpr const V& operator[] (int j) const { return (&x)[j]; }
         V& operator[] (int j) { return (&x)[j]; }
     };
+
     template<class T, int M> struct mat<T, M, 4>
     {
         typedef vec<T, M>           V;
@@ -411,17 +416,6 @@ template<class T> T minalg::determinant(const mat<T, 4, 4>& a)
         + a.x.w * (a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z + a.w.x * a.z.y * a.y.z - a.y.x * a.z.y * a.w.z - a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z);
 }
 
-//////////////////////////
-//   Linalg Utilities   //
-//////////////////////////
-#if 0
-template<class T> std::ostream& operator << (std::ostream& a, minalg::vec<T, 2>& b) { return a << '{' << b.x << ", " << b.y << '}'; }
-template<class T> std::ostream& operator << (std::ostream& a, minalg::vec<T, 3>& b) { return a << '{' << b.x << ", " << b.y << ", " << b.z << '}'; }
-template<class T> std::ostream& operator << (std::ostream& a, minalg::vec<T, 4>& b) { return a << '{' << b.x << ", " << b.y << ", " << b.z << ", " << b.w << '}'; }
-template<class T, int N> std::ostream& operator << (std::ostream& a, const minalg::mat<T, 3, N>& b) { return a << '\n' << b.row(0) << '\n' << b.row(1) << '\n' << b.row(2) << '\n'; }
-template<class T, int N> std::ostream& operator << (std::ostream& a, const minalg::mat<T, 4, N>& b) { return a << '\n' << b.row(0) << '\n' << b.row(1) << '\n' << b.row(2) << '\n' << b.row(3) << '\n'; }
-#endif
-
 ///////////////////////
 //   Utility Math    //
 ///////////////////////
@@ -433,13 +427,11 @@ static const float4x4 Identity4x4 = { { 1, 0, 0, 0 },{ 0, 1, 0, 0 },{ 0, 0, 1, 0
 static const float3x3 Identity3x3 = { { 1, 0, 0 },{ 0, 1, 0 },{ 0, 0, 1 } };
 static const float tau = 6.28318530718f;
 
-void flush_to_zero(float3& f, const float epsilon = 0.075f)
+void flush_to_zero(float3& f, const float epsilon = 0.02f)
 {
-    {
-        if (std::abs(f.x) < 0.02f) f.x = 0.f;	    if (std::abs(f.x) < epsilon) f.x = 0.f;
-        if (std::abs(f.y) < 0.02f) f.y = 0.f;	    if (std::abs(f.y) < epsilon) f.y = 0.f;
-        if (std::abs(f.z) < 0.02f) f.z = 0.f;	    if (std::abs(f.z) < epsilon) f.z = 0.f;
-    }
+    if (std::abs(f.x) < epsilon) f.x = 0.f;
+    if (std::abs(f.y) < epsilon) f.y = 0.f;
+    if (std::abs(f.z) < epsilon) f.z = 0.f;
 }
 
 // 32 bit Fowler-Noll-Vo Hash
@@ -460,13 +452,15 @@ uint32_t hash_fnv1a(char const* const str)
 
 float3 snap(const float3 & value, const float snap)
 {
-    if (snap > 0.0f) return float3(floor(value / snap) * snap);
+    if (snap > 0.0f) 
+        return float3(floor(value / snap) * snap);
+
     return value;
 }
 
 float4 make_rotation_quat_axis_angle(const float3 & axis, float angle)
 {
-    return{ axis * std::sin(angle / 2), std::cos(angle / 2) };
+    return { axis * std::sin(angle / 2), std::cos(angle / 2) };
 }
 
 float4 make_rotation_quat_between_vectors_snapped(const float3 & from, const float3 & to, const float angle)
@@ -486,12 +480,12 @@ struct gizmo_mesh_component { geometry_mesh mesh; float4 base_color, highlight_c
 struct gizmo_renderable { geometry_mesh mesh; float4 color; };
 
 struct ray { float3 origin, direction; };
-ray transform(const rigid_transform & p, const ray & r) { return{ float3(p.transform_point(r.origin.v3f())), float3(p.transform_vector(r.direction.v3f())) }; }
-ray detransform(const rigid_transform & p, const ray & r) { return{ float3(p.detransform_point(r.origin.v3f())), float3(p.detransform_vector(r.direction.v3f())) }; }
+ray    transform(const rigid_transform & p, const ray & r) { return{ float3(p.transform_point(r.origin.v3f())), float3(p.transform_vector(r.direction.v3f())) }; }
+ray    detransform(const rigid_transform & p, const ray & r) { return{ float3(p.detransform_point(r.origin.v3f())), float3(p.detransform_vector(r.direction.v3f())) }; }
 float3 transform_coord(const float4x4 & transform, const float3 & coord) { auto r = mul(transform, float4(coord, 1)); return (r.xyz() / r.w); }
 float3 transform_vector(const float4x4 & transform, const float3 & vector) { return mul(transform, float4(vector, 0)).xyz(); }
-void transform(const float scale, ray & r) { r.origin *= scale; r.direction *= scale; }
-void detransform(const float scale, ray & r) { r.origin /= scale; r.direction /= scale; }
+void   transform(const float scale, ray & r) { r.origin *= scale; r.direction *= scale; }
+void   detransform(const float scale, ray & r) { r.origin /= scale; r.direction /= scale; }
 
 /////////////////////////////////////////
 // Ray-Geometry Intersection Functions //
@@ -750,7 +744,7 @@ struct gizmo_context::gizmo_context_impl
     void position_gizmo(char const* const name, const float4& orientation, float3& position);
 
     // Public methods
-    void update(const gizmo_application_state & state);
+    void   update(const gizmo_application_state & state);
     size_t draw();
     size_t triangles(uint32_t* index_buffer, size_t index_capacity);
     size_t vertices(float* vertex_buffer, size_t stride, size_t normal_offset, size_t color_offset, size_t vertex_capacity);
@@ -761,12 +755,15 @@ gizmo_context::gizmo_context_impl::gizmo_context_impl(gizmo_context * ctx) : ctx
     std::vector<float2> arrow_points         = { { 0.25f, 0 }, { 0.25f, 0.05f },{ 1, 0.05f },{ 1, 0.10f },{ 1.2f, 0 } };
     std::vector<float2> mace_points          = { { 0.25f, 0 }, { 0.25f, 0.05f },{ 1, 0.05f },{ 1, 0.1f },{ 1.25f, 0.1f }, { 1.25f, 0 } };
     std::vector<float2> ring_points          = { { +0.025f, 1 },{ -0.025f, 1 },{ -0.025f, 1 },{ -0.025f, 1.1f },{ -0.025f, 1.1f },{ +0.025f, 1.1f },{ +0.025f, 1.1f },{ +0.025f, 1 } };
+
     mesh_components[interact::translate_x]   = { make_lathed_geometry({ 1,0,0 },{ 0,1,0 },{ 0,0,1 }, 16, arrow_points), { 1,0.5f,0.5f, 1.f }, { 1,0,0, 1.f } };
     mesh_components[interact::translate_y]   = { make_lathed_geometry({ 0,1,0 },{ 0,0,1 },{ 1,0,0 }, 16, arrow_points), { 0.5f,1,0.5f, 1.f }, { 0,1,0, 1.f } };
     mesh_components[interact::translate_z]   = { make_lathed_geometry({ 0,0,1 },{ 1,0,0 },{ 0,1,0 }, 16, arrow_points), { 0.5f,0.5f,1, 1.f }, { 0,0,1, 1.f } };
     mesh_components[interact::translate_yz]  = { make_box_geometry({ -0.01f,0.33f,0.33f },{ 0.01f,0.83f,0.83f }), { 0.5f,1,1, 0.5f }, { 0,1,1, 0.6f } };
-    mesh_components[interact::translate_zx]  = { make_box_geometry({ 0.25,-0.01f,0.25 },{ 0.75f,0.01f,0.75f }), { 1,0.5f,1, 0.5f }, { 1,0,1, 0.6f } };	    mesh_components[interact::translate_zx] = { make_box_geometry({ 0.33f,-0.01f,0.33f },{ 0.83f,0.01f,0.83f }), { 1,0.5f,1, 0.5f }, { 1,0,1, 0.6f } };
-    mesh_components[interact::translate_xy]  = { make_box_geometry({ 0.25,0.25,-0.01f },{ 0.75f,0.75f,0.01f }), { 1,1,0.5f, 0.5f }, { 1,1,0, 0.6f } };	    mesh_components[interact::translate_xy] = { make_box_geometry({ 0.33f,0.33f,-0.01f },{ 0.83f,0.83f,0.01f }), { 1,1,0.5f, 0.5f }, { 1,1,0, 0.6f } };
+    mesh_components[interact::translate_zx]  = { make_box_geometry({ 0.25,-0.01f,0.25 },{ 0.75f,0.01f,0.75f }), { 1,0.5f,1, 0.5f }, { 1,0,1, 0.6f } };	    
+    mesh_components[interact::translate_zx]  = { make_box_geometry({ 0.33f,-0.01f,0.33f },{ 0.83f,0.01f,0.83f }), { 1,0.5f,1, 0.5f }, { 1,0,1, 0.6f } };
+    mesh_components[interact::translate_xy]  = { make_box_geometry({ 0.25,0.25,-0.01f },{ 0.75f,0.75f,0.01f }), { 1,1,0.5f, 0.5f }, { 1,1,0, 0.6f } };	   
+    mesh_components[interact::translate_xy]  = { make_box_geometry({ 0.33f,0.33f,-0.01f },{ 0.83f,0.83f,0.01f }), { 1,1,0.5f, 0.5f }, { 1,1,0, 0.6f } };
     mesh_components[interact::translate_xyz] = { make_box_geometry({ -0.05f,-0.05f,-0.05f },{ 0.05f,0.05f,0.05f }),{ 0.9f, 0.9f, 0.9f, 0.25f },{ 1,1,1, 0.35f } };
     mesh_components[interact::rotate_x]      = { make_lathed_geometry({ 1,0,0 },{ 0,1,0 },{ 0,0,1 }, 32, ring_points, 0.003f), { 1, 0.5f, 0.5f, 1.f }, { 1, 0, 0, 1.f } };
     mesh_components[interact::rotate_y]      = { make_lathed_geometry({ 0,1,0 },{ 0,0,1 },{ 1,0,0 }, 32, ring_points, -0.003f), { 0.5f,1,0.5f, 1.f }, { 0,1,0, 1.f } };
@@ -784,7 +781,8 @@ void gizmo_context::gizmo_context_impl::update(const gizmo_application_state & s
     drawlist.clear();
 }
 
-size_t gizmo_context::gizmo_context_impl::vertices(float* vertex_buffer, 
+size_t gizmo_context::gizmo_context_impl::vertices(
+    float* vertex_buffer, 
     size_t stride, 
     size_t normal_offset, size_t color_offset, size_t vertex_capacity)
 {
@@ -838,8 +836,6 @@ size_t gizmo_context::gizmo_context_impl::triangles(uint32_t* index_buffer, size
     return triangle_count;
 }
 
-
-
 // This will calculate a scale constant based on the number of screenspace pixels passed as pixel_scale.
 float gizmo_context::gizmo_context_impl::scale_screenspace(const float3 position, const float pixel_scale)
 {
@@ -858,7 +854,9 @@ bool gizmo_context::gizmo_context_impl::intersect(const ray & r, interact i, flo
 // Private Gizmo Implementations //
 ///////////////////////////////////
 
-void gizmo_context::gizmo_context_impl::axis_rotation_dragger(const uint32_t id, const float3 & axis, const float3 & center, const float4 & start_orientation, float4 & orientation)
+void gizmo_context::gizmo_context_impl::axis_rotation_dragger(
+    const uint32_t id, const float3 & axis, const float3 & center, 
+    const float4 & start_orientation, float4 & orientation)
 {
     interaction_state & interaction = gizmos[id];
 
@@ -942,7 +940,8 @@ void gizmo_context::gizmo_context_impl::axis_translation_dragger(const uint32_t 
 //   Gizmo Implementations   //
 ///////////////////////////////
 
-void gizmo_context::gizmo_context_impl::position_gizmo(char const* const name, const float4 & orientation, float3 & position)
+void gizmo_context::gizmo_context_impl::position_gizmo(
+    char const* const name, const float4 & orientation, float3 & position)
 {
     bool local_toggle = frame == reference_frame::local;
     rigid_transform p = rigid_transform(local_toggle ? orientation.v4f() : v4f{ 0, 0, 0, 1 }, position.v3f());
@@ -961,12 +960,12 @@ void gizmo_context::gizmo_context_impl::position_gizmo(char const* const name, c
         detransform(draw_scale, ray);
 
         float best_t = std::numeric_limits<float>::infinity(), t;
-        if (intersect(ray, interact::translate_x, t, best_t)) { updated_state = interact::translate_x;     best_t = t; }
-        if (intersect(ray, interact::translate_y, t, best_t)) { updated_state = interact::translate_y;     best_t = t; }
-        if (intersect(ray, interact::translate_z, t, best_t)) { updated_state = interact::translate_z;     best_t = t; }
-        if (intersect(ray, interact::translate_yz, t, best_t)) { updated_state = interact::translate_yz;   best_t = t; }
-        if (intersect(ray, interact::translate_zx, t, best_t)) { updated_state = interact::translate_zx;   best_t = t; }
-        if (intersect(ray, interact::translate_xy, t, best_t)) { updated_state = interact::translate_xy;   best_t = t; }
+        if (intersect(ray, interact::translate_x, t, best_t))   { updated_state = interact::translate_x;   best_t = t; }
+        if (intersect(ray, interact::translate_y, t, best_t))   { updated_state = interact::translate_y;   best_t = t; }
+        if (intersect(ray, interact::translate_z, t, best_t))   { updated_state = interact::translate_z;   best_t = t; }
+        if (intersect(ray, interact::translate_yz, t, best_t))  { updated_state = interact::translate_yz;  best_t = t; }
+        if (intersect(ray, interact::translate_zx, t, best_t))  { updated_state = interact::translate_zx;  best_t = t; }
+        if (intersect(ray, interact::translate_xy, t, best_t))  { updated_state = interact::translate_xy;  best_t = t; }
         if (intersect(ray, interact::translate_xyz, t, best_t)) { updated_state = interact::translate_xyz; best_t = t; }
 
         if (has_clicked)
@@ -1039,7 +1038,8 @@ void gizmo_context::gizmo_context_impl::position_gizmo(char const* const name, c
     }
 }
 
-void gizmo_context::gizmo_context_impl::orientation_gizmo(char const* const name, const float3 & center, float4 & orientation)
+void gizmo_context::gizmo_context_impl::orientation_gizmo(
+    char const* const name, const float3 & center, float4 & orientation)
 {
     assert(length2(orientation) > float(1e-6));
 
@@ -1054,6 +1054,7 @@ void gizmo_context::gizmo_context_impl::orientation_gizmo(char const* const name
 
     interact transient_hover_mode = interact::none;
 
+    // test ray against the rotation controls
     {
         interact updated_state = interact::none;
 
@@ -1089,10 +1090,23 @@ void gizmo_context::gizmo_context_impl::orientation_gizmo(char const* const name
         float4 orientation(p.orientation);
         switch (gizmos[id].interaction_mode)
         {
-        case interact::rotate_x: axis_rotation_dragger(id, { 1, 0, 0 }, center, starting_orientation, orientation); activeAxis = { 1, 0, 0 }; break;
-        case interact::rotate_y: axis_rotation_dragger(id, { 0, 1, 0 }, center, starting_orientation, orientation); activeAxis = { 0, 1, 0 }; break;
-        case interact::rotate_z: axis_rotation_dragger(id, { 0, 0, 1 }, center, starting_orientation, orientation); activeAxis = { 0, 0, 1 }; break;
-        default: break;
+        case interact::rotate_x: 
+            axis_rotation_dragger(id, { 1, 0, 0 }, center, starting_orientation, orientation); 
+            activeAxis = { 1, 0, 0 };
+            break;
+
+        case interact::rotate_y: 
+            axis_rotation_dragger(id, { 0, 1, 0 }, center, starting_orientation, orientation);
+            activeAxis = { 0, 1, 0 }; 
+            break;
+
+        case interact::rotate_z: 
+            axis_rotation_dragger(id, { 0, 0, 1 }, center, starting_orientation, orientation); 
+            activeAxis = { 0, 0, 1 }; 
+            break;
+
+        default: 
+            break;
         }
         p.orientation = orientation.v4f();
     }
@@ -1189,7 +1203,8 @@ void gizmo_context::gizmo_context_impl::axis_scale_dragger(const uint32_t & id, 
     }
 }
 
-void gizmo_context::gizmo_context_impl::scale_gizmo(char const* const name, const float4 & orientation, const float3 & center, float3 & scale)
+void gizmo_context::gizmo_context_impl::scale_gizmo(
+    char const* const name, const float4 & orientation, const float3 & center, float3 & scale)
 {
     rigid_transform p = rigid_transform(orientation.v4f(), center.v3f());
     const float draw_scale = (active_state.screenspace_scale > 0.f) ? scale_screenspace(float3(p.position), active_state.screenspace_scale) : 1.f;
@@ -1200,6 +1215,7 @@ void gizmo_context::gizmo_context_impl::scale_gizmo(char const* const name, cons
 
     interact transient_hover_mode = interact::none;
 
+    // test intersections
     {
         interact updated_state = interact::none;
         auto ray = detransform(p, { float3(active_state.ray_origin), float3(active_state.ray_direction) });

@@ -25,11 +25,11 @@ namespace tinygizmo
     struct rigid_transform
     {
         rigid_transform() {}
-        rigid_transform(const v4f& orientation, const v3f& position, const v3f& scale) : orientation(orientation), position(position), scale(scale) {}
-        rigid_transform(const v4f& orientation, const v3f& position, float scale) : orientation(orientation), position(position), scale{ scale, scale, scale } {}
-        rigid_transform(const v4f& orientation, const v3f& position) : orientation(orientation), position(position) {}
+        rigid_transform(const quatf& orientation, const v3f& position, const v3f& scale) : orientation(orientation), position(position), scale(scale) {}
+        rigid_transform(const quatf& orientation, const v3f& position, float scale) : orientation(orientation), position(position), scale{ scale, scale, scale } {}
+        rigid_transform(const quatf& orientation, const v3f& position) : orientation(orientation), position(position) {}
 
-        v4f      orientation{ 0,0,0,1 };
+        quatf    orientation{ 0,0,0,1 };
         v3f      position{ 0,0,0 };
         v3f      scale{ 1,1,1 };
 
@@ -46,8 +46,8 @@ namespace tinygizmo
     struct camera_parameters
     {
         float yfov, near_clip, far_clip;
-        v3f position;
-        v4f orientation;
+        v3f   position;
+        quatf orientation;
     };
 
     struct gizmo_application_state
@@ -62,7 +62,7 @@ namespace tinygizmo
 
         v2f viewport_size;                  // 3d viewport used to render the view
         v3f ray_origin;                     // world-space ray origin (i.e. the camera position)
-        v3f ray_direction ;                 // world-space ray direction
+        v3f ray_direction;                  // world-space ray direction
 
         camera_parameters cam;              // Used for constructing inverse view projection for raycasting onto gizmo geometry
     };
@@ -102,7 +102,6 @@ namespace tinygizmo
         // Any gizmo not named between begin and end will disappear. The manipulation state will be remembered for the next time the gizmo is activated.
         bool transform_gizmo(char const* const name, rigid_transform& t);
     };
-
 
 } // end namespace tinygizmo;
 
