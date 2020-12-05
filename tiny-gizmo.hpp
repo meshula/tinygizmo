@@ -60,9 +60,9 @@ namespace tinygizmo
         float snap_scale{ 0.f };            // World-scale units used for snapping scale
         float snap_rotation{ 0.f };         // Radians used for snapping rotation quaternions (i.e. PI/8 or PI/16)
 
-        v2f viewport_size;                  // 3d viewport used to render the view
-        v3f ray_origin;                     // world-space ray origin (i.e. the camera position)
-        v3f ray_direction;                  // world-space ray direction
+        v2f viewport_size{ 0,0 };           // 3d viewport used to render the view
+        v3f ray_origin{ 0,0,0 };            // world-space ray origin (i.e. the camera position)
+        v3f ray_direction{ 0,0,1 };         // world-space ray direction
 
         camera_parameters cam;              // Used for constructing inverse view projection for raycasting onto gizmo geometry
     };
